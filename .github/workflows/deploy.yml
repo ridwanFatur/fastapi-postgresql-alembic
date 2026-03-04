@@ -47,7 +47,7 @@ jobs:
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
 
-      - name: Deploy to GCE VM
+      - name: Deploy to GCE VM Run DB
         run: |          
           ssh ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} << 'EOF'
             gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
@@ -58,9 +58,25 @@ jobs:
             docker-compose stop fastapi-alembic-app
             docker-compose rm -f fastapi-alembic-app
 
-            docker-compose up -d
-            docker-compose rm -f fastapi-alembic-migration
+            docker-compose up -d db-cvinsight
+            
+            docker-compose run --rm migration || true
+            docker-compose up -d fastapi-alembic-app
 
+            rm -f .env.fastapi
+            docker images -f "dangling=true" -q us-central1-docker.pkg.dev/ridwan-faturrahman/fastapi-alembic-repo/fastapi-alembic-app | xargs -r docker rmi
+          EOF
+
+      - name: Deploy to GCE VM Migration
+        run: |          
+          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} << 'EOF'
+            docker-compose run --rm migration || true
+          EOF
+
+      - name: Deploy to GCE VM Run App
+        run: |          
+          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} << 'EOF'
+            docker-compose up -d fastapi-alembic-app
             rm -f .env.fastapi
             docker images -f "dangling=true" -q us-central1-docker.pkg.dev/ridwan-faturrahman/fastapi-alembic-repo/fastapi-alembic-app | xargs -r docker rmi
           EOF
