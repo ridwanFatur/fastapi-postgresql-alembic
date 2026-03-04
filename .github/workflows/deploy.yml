@@ -59,7 +59,7 @@ jobs:
             docker-compose rm -f fastapi-alembic-app
 
             docker-compose up -d db-cvinsight
-            docker-compose run --rm migration
+            docker-compose run --rm migration || true
             docker-compose up -d fastapi-alembic-app
 
             rm -f .env.fastapi
